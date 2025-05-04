@@ -66,38 +66,37 @@ class DirectionalGhost(GhostAgent):
         if isScared:
             speed = 0.5
 
-        actionVectors = [Actions.directionToVector(
-            a, speed) for a in legalActions]
-        newPositions = [(pos[0]+a[0], pos[1]+a[1]) for a in actionVectors]
+        actionVectors = [Actions.directionToVector(a, speed) for a in legalActions]
+        newPositions = [(pos[0] + a[0], pos[1] + a[1]) for a in actionVectors]
         pacmanPosition = state.getPacmanPosition()
 
         # Select best actions given the state
-        distancesToPacman = [manhattanDistance(
-            pos, pacmanPosition) for pos in newPositions]
+        distancesToPacman = [manhattanDistance(pos, pacmanPosition) for pos in newPositions]
         if isScared:
             bestScore = max(distancesToPacman)
             bestProb = self.prob_scaredFlee
         else:
             bestScore = min(distancesToPacman)
             bestProb = self.prob_attack
-        bestActions = [action for action, distance in zip(
-            legalActions, distancesToPacman) if distance == bestScore]
+        bestActions = [action for action, distance in zip(legalActions, distancesToPacman) if distance == bestScore]
 
         # Construct distribution
         dist = util.Counter()
         for a in bestActions:
             dist[a] = bestProb / len(bestActions)
         for a in legalActions:
-            dist[a] += (1-bestProb) / len(legalActions)
+            dist[a] += (1 - bestProb) / len(legalActions)
         dist.normalize()
         return dist
+
 
 def scoreEvaluationFunctionGhost(currentGameState):
     return currentGameState.getScore()
 
+
 class MinimaxGhost(GhostAgent):
-    def __init__(self, index, evalFn = 'scoreEvaluationFunctionGhost', depth = '2'):
-        self.index = index # Ghosts are always with index > 0
+    def __init__(self, index, evalFn="scoreEvaluationFunctionGhost", depth="2"):
+        self.index = index  # Ghosts are always with index > 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
@@ -106,4 +105,43 @@ class MinimaxGhost(GhostAgent):
         Returns the minimax action using self.depth, self.index and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        return None
+
+        def minimax(agentIndex, currentDepth, state):
+            if state.isWin() or state.isLose() or currentDepth == self.depth:
+                return self.evaluationFunction(state), None
+
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = currentDepth + 1 if nextAgent == self.index else currentDepth
+
+            legalActions = state.getLegalActions(agentIndex)
+            if not legalActions:
+                return self.evaluationFunction(state), None
+
+            isMax = agentIndex == self.index
+
+            if isMax:
+                bestValue = float("-inf")
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = minimax(nextAgent, nextDepth, successor)
+                    if value > bestValue:
+                        bestValue = value
+                        bestAction = action
+                return bestValue, bestAction
+
+            else:
+                bestValue = float("inf")
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = minimax(nextAgent, nextDepth, successor)
+                    if value < bestValue:
+                        bestValue = value
+                        bestAction = action
+                return bestValue, bestAction
+
+        # Start the minimax search
+        _, action = minimax(self.index, 0, gameState)
+        return action
