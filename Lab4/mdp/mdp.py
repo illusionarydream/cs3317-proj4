@@ -5,19 +5,23 @@ from typing import List, Tuple, Dict, Any
 # An abstract class representing a Markov Decision Process (MDP).
 class MDP:
     # Return the start state.
-    def startState(self) -> Tuple: raise NotImplementedError("Override me")
+    def startState(self) -> Tuple:
+        raise NotImplementedError("Override me")
 
     # Return set of actions possible from |state|.
-    def actions(self, state: Tuple) -> List[Any]: raise NotImplementedError("Override me")
+    def actions(self, state: Tuple) -> List[Any]:
+        raise NotImplementedError("Override me")
 
     # Return a list of (newState, prob, reward) tuples corresponding to edges
     # coming out of |state|.
     # Mapping to notation from class:
     #   state = s, action = a, newState = s', prob = T(s, a, s'), reward = Reward(s, a, s')
     # If IsEnd(state), return the empty list.
-    def succAndProbReward(self, state: Tuple, action: Any) -> List[Tuple]: raise NotImplementedError("Override me")
+    def succAndProbReward(self, state: Tuple, action: Any) -> List[Tuple]:
+        raise NotImplementedError("Override me")
 
-    def discount(self): raise NotImplementedError("Override me")
+    def discount(self):
+        raise NotImplementedError("Override me")
 
     # Compute set of states reachable from startState.  Helper function for
     # MDPAlgorithms to know which states to compute values and policies for.
@@ -37,19 +41,28 @@ class MDP:
         # print ("%d states" % len(self.states))
         # print (self.states)
 
+
 ############################################################
+
 
 # A simple example of an MDP where states are integers in [-n, +n].
 # and actions involve moving left and right by one position.
 # We get rewarded for going to the right.
 class NumberLineMDP(MDP):
-    def __init__(self, n=5): self.n = n
-    def startState(self): return 0
-    def actions(self, state): return [-1, +1]
+    def __init__(self, n=5):
+        self.n = n
+
+    def startState(self):
+        return 0
+
+    def actions(self, state):
+        return [-1, +1]
+
     def succAndProbReward(self, state, action):
-        return [(state, 0.4, 0),
-                (min(max(state + action, -self.n), +self.n), 0.6, state)]
-    def discount(self): return 0.9
+        return [(state, 0.4, 0), (min(max(state + action, -self.n), +self.n), 0.6, state)]
+
+    def discount(self):
+        return 0.9
 
 
 class BlackjackMDP(MDP):
@@ -82,7 +95,7 @@ class BlackjackMDP(MDP):
     # You do not need to modify this function.
     # All logic for dealing with end states should be placed into the succAndProbReward function below.
     def actions(self, state: Tuple) -> List[str]:
-        return ['Take', 'Peek', 'Quit']
+        return ["Take", "Peek", "Quit"]
 
     # Given a |state| and |action|, return a list of (newState, prob, reward) tuples
     # corresponding to the states reachable from |state| when taking |action|.
@@ -96,9 +109,64 @@ class BlackjackMDP(MDP):
     # For example, if the deck has face values: 1, 2, 3. You should order your corresponding
     # tuples in the same order.
     def succAndProbReward(self, state: Tuple, action: str) -> List[Tuple]:
-        # BEGIN_YOUR_CODE 
+        # BEGIN_YOUR_CODE
 
-        raise NotImplementedError("Modify me")
+        total, peekIndex, deck = state
+
+        if deck is None:
+            return []  # Terminal state
+
+        results = []
+
+        if action == "Quit":
+            return [((total, None, None), 1.0, total)]
+
+        if action == "Peek":
+            if peekIndex is not None:
+                return []  # Cannot peek twice
+            total_cards = sum(deck)
+            for i, count in enumerate(deck):
+                if count > 0:
+                    prob = count / total_cards
+                    results.append(((total, i, deck), prob, -self.peekCost))
+            return results
+
+        if action == "Take":
+            if peekIndex is not None:
+                card_value = self.cardValues[peekIndex]
+                if deck[peekIndex] == 0:
+                    return []
+                new_total = total + card_value
+                new_deck = list(deck)
+                new_deck[peekIndex] -= 1
+                new_deck_tuple = tuple(new_deck)
+                if new_total > self.threshold:
+                    return [((new_total, None, None), 1.0, 0)]
+                elif sum(new_deck) == 0:
+                    return [((new_total, None, None), 1.0, new_total)]
+                else:
+                    return [((new_total, None, new_deck_tuple), 1.0, 0)]
+
+            else:
+                total_cards = sum(deck)
+                for i, count in enumerate(deck):
+                    if count == 0:
+                        continue
+                    prob = count / total_cards
+                    card_value = self.cardValues[i]
+                    new_total = total + card_value
+                    new_deck = list(deck)
+                    new_deck[i] -= 1
+                    new_deck_tuple = tuple(new_deck)
+                    if new_total > self.threshold:
+                        results.append(((new_total, None, None), prob, 0))
+                    elif sum(new_deck) == 0:
+                        results.append(((new_total, None, None), prob, new_total))
+                    else:
+                        results.append(((new_total, None, new_deck_tuple), prob, 0))
+                return results
+
+        return []
 
         # END_YOUR_CODE
 
